@@ -180,13 +180,14 @@ sealed partial class MainForm
     {
         if (!string.Equals(request.Kind, "video", StringComparison.OrdinalIgnoreCase) || Tools.Ready || _installingTools) return true;
         var answer = MessageBox.Show(this,
-            "Video downloads need yt-dlp and FFmpeg (free, open source, about 140 MB).\n\nDownload them now? The video will be added to the list either way.",
+            "Video downloads need yt-dlp and FFmpeg (free, open source, about 150 MB).\n\nDownload them now? The video will be added to the list either way.",
             "OSDM", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
         if (answer == DialogResult.Yes) _ = InstallToolsAsync();
         return true;
     }
 
-    async Task InstallToolsAsync()
+    /// <param name="quiet">Started by OSDM itself (an upgrade): a failure shows in the status bar, not in a message box.</param>
+    async Task InstallToolsAsync(bool quiet = false)
     {
         if (Tools.Ready)
         {
@@ -196,6 +197,7 @@ sealed partial class MainForm
         if (_installingTools) return;
         _installingTools = true;
         var progress = new Progress<string>(s => _toolsLabel.Text = s);
+        string? failed = null;
         try
         {
             await Tools.InstallAsync(progress, CancellationToken.None);
@@ -204,12 +206,14 @@ sealed partial class MainForm
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, "Could not install the video tools:\n" + ex.Message, "OSDM", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            failed = "Could not install the video tools:\n" + ex.Message;
+            if (!quiet) MessageBox.Show(this, failed, "OSDM", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
         {
             _installingTools = false;
             UpdateStatusLabels();
+            if (failed != null) _toolsLabel.ToolTipText = failed + "\n\nTools > Install video tools";
         }
     }
 
@@ -249,7 +253,7 @@ sealed partial class MainForm
 
     void ShowSettings()
     {
-        using var form = new SettingsForm(_mgr.Settings, StartWithWindows.Enabled, InstallToolsAsync, ShowExtensionHelp);
+        using var form = new SettingsForm(_mgr.Settings, StartWithWindows.Enabled, () => InstallToolsAsync(), ShowExtensionHelp);
         if (form.ShowDialog(this) != DialogResult.OK) return;
         int oldPort = _mgr.Settings.BridgePort;
         _mgr.ApplySettings(form.Result);

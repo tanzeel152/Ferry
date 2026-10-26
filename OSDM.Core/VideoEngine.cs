@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Globalization;
-using System.Text;
 
 namespace OSDM.Core;
 
@@ -29,7 +28,7 @@ public sealed class VideoEngine
     public async Task RunAsync(CancellationToken ct)
     {
         var item = _item;
-        string ytdlp = Tools.YtDlp ?? throw new InvalidOperationException("yt-dlp is not installed. Use Tools > Install video tools.");
+        if (Tools.YtDlp == null) throw new InvalidOperationException("yt-dlp is not installed. Use Tools > Install video tools.");
         // Formats like "bv*+ba" are separate video and sound streams that FFmpeg joins. Without a working FFmpeg,
         // yt-dlp leaves them as two files and still reports success, so check first.
         bool merging = FormatFor(item).Contains('+');
@@ -39,10 +38,10 @@ public sealed class VideoEngine
         Directory.CreateDirectory(item.Folder);
 
         // The browser's cookies are left out at first: with YouTube sign-in cookies, yt-dlp switches to players
-        // that need a JavaScript runtime and finds no formats. They are sent only if the site asks to sign in.
-        string? error = await RunYtDlpAsync(ytdlp, ffmpeg, cookies: false, ct);
+        // that need a JavaScript runtime and finds no formats if there is none. They are sent only if the site asks to sign in.
+        string? error = await RunYtDlpAsync(ffmpeg, cookies: false, ct);
         if (error != null && AsksToSignIn(error) && !string.IsNullOrEmpty(item.Cookies))
-            error = await RunYtDlpAsync(ytdlp, ffmpeg, cookies: true, ct);
+            error = await RunYtDlpAsync(ffmpeg, cookies: true, ct);
         if (error != null) throw new InvalidOperationException(error);
 
         string full = item.FullPath;
@@ -70,19 +69,10 @@ public sealed class VideoEngine
     }
 
     /// <summary>Runs yt-dlp once. Returns null if it succeeded, otherwise its error message.</summary>
-    async Task<string?> RunYtDlpAsync(string ytdlp, string? ffmpeg, bool cookies, CancellationToken ct)
+    async Task<string?> RunYtDlpAsync(string? ffmpeg, bool cookies, CancellationToken ct)
     {
         var item = _item;
-        var psi = new ProcessStartInfo(ytdlp)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
-        };
-        psi.Environment["PYTHONIOENCODING"] = "utf-8";
+        var psi = Tools.YtDlpCommand() ?? throw new InvalidOperationException("yt-dlp is not installed. Use Tools > Install video tools.");
         foreach (var arg in BuildArguments(ffmpeg, cookies)) psi.ArgumentList.Add(arg);
 
         using var process = Tools.Start(psi);
@@ -135,10 +125,10 @@ public sealed class VideoEngine
         var item = _item;
         var a = new List<string>
         {
-            // UTF-8 output: otherwise characters such as the "｜" yt-dlp puts in file names are dropped from the
-            // printed path, and the finished file is not found.
-            "--encoding", "utf-8",
-            "--newline", "--no-colors", "--no-playlist", "--quiet", "--progress", "--no-simulate",
+            "--newline", "--no-playlist", "--quiet", "--progress", "--no-simulate",
+            // A piece that still fails after yt-dlp's retries stops the download (Resume continues it) instead of
+            // being left out, which would give a video with a gap.
+            "--abort-on-unavailable-fragments",
             "-f", FormatFor(item),
             "--merge-output-format", _settings.VideoContainer,
             "-P", item.Folder,
@@ -150,7 +140,15 @@ public sealed class VideoEngine
         };
         if (ffmpeg != null) { a.Add("--ffmpeg-location"); a.Add(Path.GetDirectoryName(ffmpeg)!); }
         a.AddRange(BrowserOptions(_settings, item.Referrer, item.UserAgent, cookies ? item.Cookies : null));
+        // Several connections, like file downloads: HLS/DASH pieces are fetched in parallel, and YouTube's streams
+        // are split into 10 MB pieces ("dashy") so they can be too. yt-dlp applies --limit-rate to each connection,
+        // so a speed limit uses one.
         if (_settings.SpeedLimitKBps > 0) { a.Add("--limit-rate"); a.Add(_settings.SpeedLimitKBps + "K"); }
+        else
+        {
+            a.Add("-N"); a.Add(_settings.ConnectionsPerDownload.ToString(CultureInfo.InvariantCulture));
+            a.Add("--extractor-args"); a.Add("youtube:formats=dashy");
+        }
         a.Add("--");
         a.Add(item.Url);
         return a;

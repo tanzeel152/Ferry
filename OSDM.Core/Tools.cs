@@ -2,26 +2,69 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace OSDM.Core;
 
 /// <summary>Finds or installs the open-source video tools: yt-dlp (site extraction) and FFmpeg (merging).</summary>
+/// <remarks>
+/// yt-dlp is installed as its plain-Python version (yt-dlp.pyz) run by the official embeddable Python, not as
+/// yt-dlp.exe. Every program file of that Python is signed by the Python Software Foundation, so Windows Smart App
+/// Control lets it run. yt-dlp.exe is unsigned and unpacks unsigned libraries each run, which Smart App Control
+/// blocks (with a Windows Security notification) until it has seen them often enough, and again after each update.
+/// </remarks>
 public static class Tools
 {
-    const string YtDlpUrl = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
+    const string PythonVersion = "3.13.15";
+    const string PythonZipUrl = "https://www.python.org/ftp/python/" + PythonVersion + "/python-" + PythonVersion + "-embed-amd64.zip";
+    const string YtDlpUrl = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
     const string FFmpegZipUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip";
 
-    public static string Folder { get; } =
+    public static string Folder { get; set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OSDM", "tools");
 
-    public static string? YtDlp => Find("yt-dlp.exe");
+    static string PythonExe => Path.Combine(Folder, "python", "python.exe");
+    static string YtDlpPyz => Path.Combine(Folder, "yt-dlp.pyz");
+
+    public static string? YtDlp => File.Exists(PythonExe) && File.Exists(YtDlpPyz) ? YtDlpPyz : null;
     public static string? FFmpeg => Find("ffmpeg.exe");
     public static bool Ready => YtDlp != null && FFmpeg != null;
 
+    /// <summary>True for installs from OSDM 0.3 and older, which used yt-dlp.exe; installing again replaces it.</summary>
+    public static bool HasOldYtDlp => YtDlp == null && File.Exists(Path.Combine(Folder, "yt-dlp.exe"));
+
     /// <summary>
-    /// Starts yt-dlp or FFmpeg with Windows error message boxes turned off (child processes inherit this).
-    /// Smart App Control blocks a library inside yt-dlp.exe (Cryptodome\Hash\_SHA1.pyd). yt-dlp works without it,
-    /// but Windows would show a "Bad Image" box and yt-dlp would wait until someone clicked OK.
+    /// A yt-dlp command (UTF-8 output, no window) to add arguments to and run with <see cref="Start"/>.
+    /// Null if yt-dlp is not installed.
+    /// </summary>
+    public static ProcessStartInfo? YtDlpCommand()
+    {
+        if (YtDlp is not { } pyz) return null;
+        var psi = new ProcessStartInfo(PythonExe)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
+        // UTF-8 output: otherwise characters such as the "｜" yt-dlp puts in file names are dropped from the
+        // printed path, and the finished file is not found.
+        foreach (var arg in new[] { "-X", "utf8", pyz, "--encoding", "utf-8", "--no-colors" }) psi.ArgumentList.Add(arg);
+        // YouTube's player scripts need a JavaScript runtime. Without one, yt-dlp finds no formats when signed in
+        // (needed when YouTube asks to "confirm you're not a bot") and downloads can be slowed down.
+        foreach (var runtime in new[] { "deno", "node", "bun" }.Where(r => Find(r + ".exe") != null))
+        {
+            psi.ArgumentList.Add("--js-runtimes");
+            psi.ArgumentList.Add(runtime);
+        }
+        return psi;
+    }
+
+    /// <summary>
+    /// Starts yt-dlp or FFmpeg with Windows error message boxes turned off (child processes inherit this), so a
+    /// library that Windows refuses to load cannot leave a "Bad Image" box waiting for someone to click OK.
     /// </summary>
     public static Process Start(ProcessStartInfo psi)
     {
@@ -59,6 +102,7 @@ public static class Tools
         }
     }
 
+    /// <summary>Looks next to OSDM, in the tools folder, then on PATH.</summary>
     static string? Find(string exe)
     {
         var dirs = new List<string> { AppContext.BaseDirectory, Folder };
@@ -75,15 +119,30 @@ public static class Tools
         return null;
     }
 
-    /// <summary>Downloads whichever of yt-dlp.exe and ffmpeg.exe is missing into %LOCALAPPDATA%\OSDM\tools.</summary>
+    /// <summary>Downloads whichever of Python, yt-dlp and FFmpeg is missing into %LOCALAPPDATA%\OSDM\tools.</summary>
     public static async Task InstallAsync(IProgress<string> status, CancellationToken ct)
     {
         Directory.CreateDirectory(Folder);
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("OSDM/0.1");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("OSDM/0.4");
 
-        if (YtDlp == null)
-            await FetchAsync(http, YtDlpUrl, Path.Combine(Folder, "yt-dlp.exe"), "yt-dlp", status, ct);
+        if (!File.Exists(PythonExe))
+        {
+            string zip = Path.Combine(Folder, "python.zip");
+            await FetchAsync(http, PythonZipUrl, zip, "Python", status, ct);
+            status.Report("Unpacking Python...");
+            string dir = Path.GetDirectoryName(PythonExe)!;
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            ZipFile.ExtractToDirectory(zip, dir);
+            File.Delete(zip);
+        }
+        if (!File.Exists(YtDlpPyz))
+            await FetchAsync(http, YtDlpUrl, YtDlpPyz, "yt-dlp", status, ct);
+        try
+        {
+            if (YtDlp != null) File.Delete(Path.Combine(Folder, "yt-dlp.exe")); // the old, unsigned version
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } // still running; unused from now on
 
         if (FFmpeg == null)
         {

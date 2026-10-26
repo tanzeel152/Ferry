@@ -171,6 +171,7 @@ sealed partial class MainForm : Form
         _bridgeLabel.Text = _bridgeOk ? $"Browser extension: port {_bridge.Port}" : $"Browser extension: port {_bridge.Port} unavailable";
         _bridgeLabel.ToolTipText = _bridgeOk ? "OSDM is ready for downloads from the browser extension" : _bridge.StartError;
         UpdateStatusLabels();
+        if (Tools.HasOldYtDlp) _ = InstallToolsAsync(quiet: true); // replaces yt-dlp.exe with the version Smart App Control allows
         try { _lastClipboard = Clipboard.ContainsText() ? Clipboard.GetText() : null; } catch { }
         RefreshList(force: true);
         _timer.Start();

@@ -11,7 +11,7 @@ namespace OSDM.Core;
 /// </summary>
 public sealed class BrowserBridge : IDisposable
 {
-    public const string Version = "0.3.0";
+    public const string Version = "0.4.0";
     static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     readonly HttpListener _listener = new();

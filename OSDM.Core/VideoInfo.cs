@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -43,29 +42,20 @@ public sealed class VideoInfo
 
     static async Task<VideoInfo> FetchAsync(AddRequest request, Settings settings)
     {
-        string ytdlp = Tools.YtDlp ?? throw new InvalidOperationException("The video tools are not installed. In OSDM, use Tools > Install video tools.");
+        if (Tools.YtDlp == null) throw new InvalidOperationException("The video tools are not installed. In OSDM, use Tools > Install video tools.");
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         // Like downloads: without the browser's cookies first (see VideoEngine), with them only if the site asks to sign in.
-        var (json, error) = await RunAsync(ytdlp, request, settings, cookies: false, timeout.Token);
+        var (json, error) = await RunAsync(request, settings, cookies: false, timeout.Token);
         if (json == null && VideoEngine.AsksToSignIn(error!) && !string.IsNullOrEmpty(request.Cookies))
-            (json, error) = await RunAsync(ytdlp, request, settings, cookies: true, timeout.Token);
+            (json, error) = await RunAsync(request, settings, cookies: true, timeout.Token);
         if (json == null) throw new InvalidOperationException(error);
         return Parse(json, settings.VideoContainer);
     }
 
-    static async Task<(string? Json, string? Error)> RunAsync(string ytdlp, AddRequest request, Settings settings, bool cookies, CancellationToken ct)
+    static async Task<(string? Json, string? Error)> RunAsync(AddRequest request, Settings settings, bool cookies, CancellationToken ct)
     {
-        var psi = new ProcessStartInfo(ytdlp)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
-        };
-        psi.Environment["PYTHONIOENCODING"] = "utf-8";
-        foreach (var arg in new[] { "--encoding", "utf-8", "--dump-single-json", "--no-playlist", "--no-colors", "--no-warnings" })
+        var psi = Tools.YtDlpCommand() ?? throw new InvalidOperationException("The video tools are not installed. In OSDM, use Tools > Install video tools.");
+        foreach (var arg in new[] { "--dump-single-json", "--no-playlist", "--no-warnings" })
             psi.ArgumentList.Add(arg);
         foreach (var arg in VideoEngine.BrowserOptions(settings, request.Referrer ?? request.PageUrl, request.UserAgent, cookies ? request.Cookies : null))
             psi.ArgumentList.Add(arg);

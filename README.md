@@ -13,12 +13,12 @@ A Windows download manager written in C# / .NET 8.
   - adds right-click menus ("Download with OSDM", "Download video on this page")
   - shows a **Download video ▾** panel in the corner of any large video you point at. It opens a menu of that video's qualities with their sizes (4320p … 144p, Audio only), read by OSDM with yt-dlp in a few seconds. The **✕** hides the panel for that video; the popup can turn it off everywhere.
   - detects HLS/DASH streams and media files on the page and lists them in its popup, which also shows whether OSDM is running and can bring its window up
-- **Video downloads** from YouTube and about 1,800 other sites, plus HLS (`.m3u8`) and DASH (`.mpd`) streams, using yt-dlp and FFmpeg. The quality picked in the browser shows in OSDM's download window, where it can be changed (or set to one of the Settings presets).
+- **Video downloads** from YouTube and about 1,800 other sites, plus HLS (`.m3u8`) and DASH (`.mpd`) streams, using yt-dlp and FFmpeg. They use several connections too: stream pieces download in parallel, and YouTube videos are fetched in 10 MB pieces. The quality picked in the browser shows in OSDM's download window, where it can be changed (or set to one of the Settings presets).
 - Speed limit, proxy (HTTP or SOCKS), retries, automatic file naming (`Content-Disposition`, de-duplicated names), clipboard monitoring, drag and drop, single instance (`OSDM.exe <url>` hands the URL to the running copy).
 
 ## Install
 
-Run `dist\OSDM-Setup-0.3.0.exe`. It installs OSDM to `C:\Program Files\OSDM` and adds:
+Run `dist\OSDM-Setup-0.4.0.exe`. It installs OSDM to `C:\Program Files\OSDM` and adds:
 
 - Start menu and desktop shortcuts
 - an entry in Control Panel > Programs and Features (and Settings > Apps) with an uninstaller
@@ -55,16 +55,20 @@ The extension talks to OSDM at `http://localhost:51515`. OSDM only accepts reque
 
 Use **Tools > Install video tools** once. It downloads:
 
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) (Unlicense), which finds the video streams on a page
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) (Unlicense), which finds the video streams on a page. OSDM installs its plain-Python version (`yt-dlp.pyz`, 3 MB)...
+- ...and the official [embeddable Python](https://www.python.org/downloads/windows/) 3.13 (PSF license, 11 MB) to run it.
 - [FFmpeg](https://ffmpeg.org) (GPL build from BtbN), which merges video and audio
 
-Both go into `%LOCALAPPDATA%\OSDM\tools`. OSDM also uses copies placed next to `OSDM.exe` or on `PATH`.
+They go into `%LOCALAPPDATA%\OSDM\tools`. OSDM also uses an `ffmpeg.exe` placed next to `OSDM.exe` or on `PATH`. Installs from OSDM 0.3 (which used `yt-dlp.exe`) are switched over automatically when OSDM starts.
+
+If [Node.js](https://nodejs.org), [Deno](https://deno.com) or [Bun](https://bun.sh) is installed, yt-dlp uses it to run YouTube's player scripts. That makes signed-in downloads work (needed when YouTube asks to "confirm you're not a bot") and avoids slowed-down YouTube downloads.
 
 Notes:
 
-- **Browser cookies are not sent at first.** With YouTube sign-in cookies, yt-dlp needs a JavaScript runtime and finds no formats ("Requested format is not available"). OSDM retries with the browser's cookies only when the site asks you to sign in (private, age-restricted or members-only videos).
-- **Smart App Control** (Windows 11) can block `ffmpeg.exe` the first time it runs ("An Application Control policy has blocked this file"). OSDM then stops with that message instead of leaving the video and sound as two files. Press **Resume** to try again; parts already downloaded are kept.
-- Smart App Control also blocks one optional library inside `yt-dlp.exe` (`Cryptodome\Hash\_SHA1.pyd`). yt-dlp works without it. OSDM starts yt-dlp with Windows error boxes turned off, so this no longer shows a "Bad Image" message that yt-dlp waits on. Windows may still show its own "Smart App Control blocked part of this app" notice.
+- **Why not `yt-dlp.exe`?** Windows 11's **Smart App Control** blocks unsigned programs it does not know yet, and shows a "Smart App Control blocked part of this app" notice. `yt-dlp.exe` is unsigned and unpacks unsigned libraries every time it runs (one of them, `Cryptodome\Hash\_SHA1.pyd`, was blocked on every run), and each yt-dlp update starts over. All 30 program files of the embeddable Python are signed by the Python Software Foundation (and Microsoft), so Smart App Control allows them, and `yt-dlp.pyz` is Python code, not a program file.
+- **Browser cookies are not sent at first.** With YouTube sign-in cookies and no JavaScript runtime, yt-dlp finds no formats ("Requested format is not available"). OSDM retries with the browser's cookies only when the site asks you to sign in (private, age-restricted or members-only videos, or YouTube's "not a bot" check).
+- **Smart App Control can still block `ffmpeg.exe`** (unsigned) for a while after it is first installed ("An Application Control policy has blocked this file"). OSDM then stops with that message instead of leaving the video and sound as two files. Press **Resume** to try again; parts already downloaded are kept.
+- **Speed limit:** yt-dlp applies a speed limit to each connection, so a video download uses one connection while a limit is set.
 - A YouTube or other video-site link added as a **File** is switched to a video download instead of being saved as `watch.html`.
 
 ## Where data is kept
@@ -84,7 +88,7 @@ Notes:
 | `OSDM.Core\VideoEngine.cs` | Runs yt-dlp and reads its progress |
 | `OSDM.Core\DownloadManager.cs` | Queue, start/pause/remove, speed sampling, saving |
 | `OSDM.Core\BrowserBridge.cs` | Local HTTP server for the extension |
-| `OSDM.Core\Tools.cs` | Finds or installs yt-dlp and FFmpeg |
+| `OSDM.Core\Tools.cs` | Finds or installs Python, yt-dlp and FFmpeg; starts yt-dlp |
 | `OSDM\MainForm*.cs` | Main window, menus, tray icon, clipboard monitoring |
 | `OSDM\Sidebar.cs`, `DownloadListView.cs`, `DetailsPanel.cs`, `EmptyState.cs` | The custom-drawn parts of the main window |
 | `OSDM\Theme.cs`, `FlatRenderer.cs`, `Icons.cs`, `Shapes.cs` | Light/dark colors, flat menus and toolbar, line icons |

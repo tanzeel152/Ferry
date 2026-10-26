@@ -218,7 +218,7 @@ sealed class SettingsForm : Form
 
     void UpdateToolsStatus()
     {
-        _toolsStatus.Text = Tools.Ready ? "yt-dlp and FFmpeg are installed" : "Not installed (about 140 MB)";
+        _toolsStatus.Text = Tools.Ready ? "yt-dlp and FFmpeg are installed" : "Not installed (about 150 MB)";
         _installTools.Visible = !Tools.Ready;
         _installTools.Enabled = true;
     }
