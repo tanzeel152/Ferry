@@ -7,6 +7,11 @@
 [![Build](https://github.com/tanzeel152/Ferry/actions/workflows/build.yml/badge.svg)](https://github.com/tanzeel152/Ferry/actions/workflows/build.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="screenshots/main-dark.png">
+  <img src="screenshots/main-light.png" alt="Ferry's download window: categories on the left, a list of downloads with progress bars, and one file downloading on 8 connections">
+</picture>
+
 Ferry was called OSDM (Open Source Download Manager) up to version 0.4. See [Upgrading from OSDM](#upgrading-from-osdm).
 
 ## Download
@@ -37,6 +42,10 @@ Ferry runs on 64-bit Windows 10 and 11 and does not need .NET installed.
   - detects HLS/DASH streams and media files on the page and lists them in its popup, which also shows whether Ferry is running and can bring its window up
 - **Video downloads** from YouTube and about 1,800 other sites, plus HLS (`.m3u8`) and DASH (`.mpd`) streams, using yt-dlp and FFmpeg. They use several connections too: stream pieces download in parallel, and YouTube videos are fetched in 10 MB pieces. The quality picked in the browser shows in Ferry's download window, where it can be changed (or set to one of the Settings presets).
 - Speed limit, proxy (HTTP or SOCKS), retries, automatic file naming (`Content-Disposition`, de-duplicated names), clipboard monitoring, drag and drop, single instance (`Ferry.exe <url>` hands the URL to the running copy).
+
+| Download video, in the quality you pick | The extension's popup |
+|---|---|
+| <img src="screenshots/video-menu.png" alt="A Download video button over a video, with a menu of qualities from 2160p60 down to Audio only, each with its size" width="560"> | <picture><source media="(prefers-color-scheme: dark)" srcset="screenshots/extension-popup-dark.png"><img src="screenshots/extension-popup-light.png" alt="The Ferry extension popup: connected to Ferry, a Download video on this page button, and media files found on the page" width="300"></picture> |
 
 ## Install
 
@@ -154,6 +163,15 @@ Command line: `Ferry.exe <url>` adds a download, `--tray` starts without opening
 - Code-signed releases
 
 Network drivers like IDM's "Advanced Integration" are not planned. They need a signed kernel driver, and the browser extension covers modern HTTPS sites anyway.
+
+## Code signing policy
+
+Ferry's Windows releases are not code-signed yet; we plan to sign them through [SignPath Foundation](https://signpath.org)'s free program for open-source projects. Until then, check downloads against `SHA256SUMS.txt` on the release page.
+
+- **How releases are made:** every release is built by [GitHub Actions](.github/workflows/release.yml) from the source code in this repository. No release file is built on anyone's own computer.
+- **Committers and reviewers:** [Tanzeel Ahmed (@tanzeel152)](https://github.com/tanzeel152). Changes from other contributors are reviewed by a committer before they are merged.
+- **Approvers:** [Tanzeel Ahmed (@tanzeel152)](https://github.com/tanzeel152). Once signing starts, each signing request is approved by hand.
+- **Privacy:** Ferry does not send information to other computers unless you ask it to. It connects to the sites you download from, and to python.org and GitHub only when you install the video tools (**Tools > Install video tools**, or once, automatically, to replace the video tools installed by OSDM 0.3). The browser extension talks only to Ferry on your own computer. Video downloads run yt-dlp, which contacts the video's site.
 
 ## License
 

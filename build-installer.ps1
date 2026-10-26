@@ -1,10 +1,14 @@
 # Builds publish\Ferry.exe, then dist\Ferry-Setup-<version>.exe.
 # Needs the .NET 8 SDK and Inno Setup 6 (winget install JRSoftware.InnoSetup).
+# -SkipPublish packages the Ferry.exe already in publish\ (the release workflow signs it first).
+param([switch]$SkipPublish)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
-dotnet publish Ferry\Ferry.csproj -c Release -o publish
-if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+if (-not $SkipPublish) {
+    dotnet publish Ferry\Ferry.csproj -c Release -o publish
+    if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
+}
 
 $iscc = @(
     (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source

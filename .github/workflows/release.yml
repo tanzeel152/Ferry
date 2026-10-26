@@ -1,5 +1,9 @@
 # Pushing a tag like v0.5.0 builds the installer, the portable zip and the extension zip, and publishes them
 # as a GitHub release with that version's notes from CHANGELOG.md. See "Making a release" in CONTRIBUTING.md.
+#
+# Code signing: once the SIGNPATH_ORGANIZATION_ID repository variable and the SIGNPATH_API_TOKEN secret are set
+# (see "Code signing" in CONTRIBUTING.md), Ferry.exe and the installer are signed through SignPath.
+# Without them, the release is built unsigned.
 name: Release
 
 on:
@@ -8,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: read # lets SignPath read the build's artifacts
 
 jobs:
   release:
@@ -36,8 +41,67 @@ jobs:
         run: |
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --no-progress -y }
 
+      - name: Build Ferry.exe
+        run: dotnet publish Ferry\Ferry.csproj -c Release -o publish
+
+      # Sign Ferry.exe before it goes into the installer.
+      - name: Upload Ferry.exe for signing
+        id: unsigned-app
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-app
+          path: publish/Ferry.exe
+
+      - name: Sign Ferry.exe
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ferry
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: app
+          github-artifact-id: ${{ steps.unsigned-app.outputs.artifact-id }}
+          output-artifact-directory: signed-app
+
+      - name: Use the signed Ferry.exe
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        run: Copy-Item signed-app\Ferry.exe publish\Ferry.exe -Force
+
       - name: Build the installer
-        run: .\build-installer.ps1
+        run: .\build-installer.ps1 -SkipPublish
+
+      # Sent as "Ferry-Setup.exe", so SignPath's artifact configuration does not change with each version.
+      - name: Prepare the installer for signing
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        run: |
+          New-Item -ItemType Directory unsigned-setup | Out-Null
+          Copy-Item "dist\Ferry-Setup-$env:VERSION.exe" unsigned-setup\Ferry-Setup.exe
+
+      - name: Upload the installer for signing
+        id: unsigned-setup
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-setup
+          path: unsigned-setup/Ferry-Setup.exe
+
+      - name: Sign the installer
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ferry
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: setup
+          github-artifact-id: ${{ steps.unsigned-setup.outputs.artifact-id }}
+          output-artifact-directory: signed-setup
+
+      - name: Use the signed installer
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        run: Copy-Item signed-setup\Ferry-Setup.exe "dist\Ferry-Setup-$env:VERSION.exe" -Force
 
       - name: Package
         run: |

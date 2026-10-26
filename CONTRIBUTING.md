@@ -59,6 +59,32 @@ There are no automated tests yet (adding some to `Ferry.Core` is a welcome contr
 
 The [release workflow](.github/workflows/release.yml) builds the installer, the portable zip and the extension zip on GitHub's servers, writes `SHA256SUMS.txt`, and publishes them as a GitHub release with that version's notes from `CHANGELOG.md`.
 
+## Code signing (maintainers)
+
+Releases are unsigned until [SignPath Foundation](https://signpath.org) approves Ferry for free code signing. To set it up:
+
+1. Apply at [signpath.org](https://signpath.org) (choose **Apply**). They require a published release, so apply after the first one. Turn on two-factor authentication for GitHub first; SignPath requires it.
+2. Once approved, in SignPath create a project with the slug `ferry`, linked to this repository as a GitHub trusted build system, with a signing policy `release-signing` (manual approval on) and two artifact configurations:
+
+   `app`:
+
+   ```xml
+   <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+     <zip-file>
+       <pe-file path="Ferry.exe">
+         <authenticode-sign/>
+       </pe-file>
+     </zip-file>
+   </artifact-configuration>
+   ```
+
+   `setup`: the same, with `path="Ferry-Setup.exe"`.
+
+3. In this repository's **Settings > Secrets and variables > Actions**, add the variable `SIGNPATH_ORGANIZATION_ID` (your SignPath organization ID) and the secret `SIGNPATH_API_TOKEN` (an API token of a SignPath CI user that may submit signing requests).
+4. In README.md, add this line to **Code signing policy**: `Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org)`, and remove the "not signed yet" sentences from it and from **Download**.
+
+From then on, each release waits until an approver approves its two signing requests in SignPath.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the [GNU GPL v3 or later](LICENSE), like the rest of Ferry.
