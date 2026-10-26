@@ -1,0 +1,64 @@
+name: Bug report
+description: Something in Ferry or its browser extension does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please [search the existing issues](https://github.com/tanzeel152/Ferry/issues?q=is%3Aissue) first.
+        Security problems should be reported privately instead, as described in [SECURITY.md](https://github.com/tanzeel152/Ferry/blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead? Include any error message Ferry showed, word for word.
+      placeholder: |
+        1. Clicked "Download video" on a YouTube video and picked 1080p
+        2. The download stopped at 45% with "Error: ..."
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Download link
+      description: The link or page you were downloading from, if you can share it. Leave out links that contain private tokens or passwords.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of Ferry?
+      options:
+        - File downloads (speed, pause/resume, connections)
+        - Video downloads (YouTube and other sites)
+        - Browser extension
+        - Installer or startup
+        - Download window or settings
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: ferry-version
+    attributes:
+      label: Ferry version
+      description: Shown in Help > About Ferry.
+      placeholder: "0.5.0"
+    validations:
+      required: true
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      description: Press Win+R, type `winver` and press Enter.
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      description: If the problem involves the browser extension.
+      placeholder: Chrome 141
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or anything else
+      description: Drag screenshots in here. For download problems, the details panel at the bottom of Ferry's window often helps.

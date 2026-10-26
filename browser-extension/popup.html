@@ -2,20 +2,20 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>OSDM</title>
+  <title>Ferry</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <header>
     <img src="icons/icon32.png" width="28" height="28" alt="">
-    <div class="brand"><strong>OSDM</strong><span>Download Manager</span></div>
+    <div class="brand"><strong>Ferry</strong><span>Download Manager</span></div>
     <span id="status" class="pill"><i></i><b>Checking</b></span>
   </header>
 
   <div id="offline" class="notice" hidden>
     <div>
-      <strong>OSDM isn't running</strong>
-      <p>Start OSDM from the Start menu, then try again.</p>
+      <strong>Ferry isn't running</strong>
+      <p>Start Ferry from the Start menu, then try again.</p>
     </div>
     <button id="retry" class="secondary">Try again</button>
   </div>
@@ -28,7 +28,7 @@
 
   <section class="settings">
     <label class="setting">
-      <span><b>Catch downloads</b><small>Send downloads of the usual file types to OSDM</small></span>
+      <span><b>Catch downloads</b><small>Send downloads of the usual file types to Ferry</small></span>
       <input type="checkbox" id="enabled" class="switch">
     </label>
     <label class="setting">
@@ -36,7 +36,7 @@
       <input type="checkbox" id="videoButton" class="switch">
     </label>
     <label class="setting">
-      <span><b>Port</b><small>Must match Settings &gt; Browser in OSDM</small></span>
+      <span><b>Port</b><small>Must match Settings &gt; Browser in Ferry</small></span>
       <input type="number" id="port" min="1024" max="65535">
     </label>
   </section>

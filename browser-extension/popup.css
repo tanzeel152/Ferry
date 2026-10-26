@@ -1,4 +1,4 @@
-/* Same colors as the OSDM app (Theme.cs), light and dark. */
+/* Same colors as the Ferry app (Theme.cs), light and dark. */
 :root {
   --bg: #f6f7f9; --card: #ffffff; --line: #e1e4ea; --text: #1d2128; --muted: #6b7280;
   --accent: #2563eb; --accent-hover: #1d4ed8; --soft: #dce7fd; --hover: #e5e9f0; --track: #d1d5db;

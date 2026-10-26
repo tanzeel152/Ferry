@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "OSDM Integration",
-  "description": "Sends downloads and videos to OSDM (Open Source Download Manager) running on this computer.",
-  "version": "0.3.0",
+  "name": "Ferry Integration",
+  "homepage_url": "https://github.com/tanzeel152/Ferry",
+  "description": "Sends downloads and videos to Ferry, the free open-source download manager, running on this computer.",
+  "version": "0.5.0",
   "minimum_chrome_version": "110",
   "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
   "action": {
-    "default_title": "OSDM",
+    "default_title": "Ferry",
     "default_popup": "popup.html",
     "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
   },

@@ -1,0 +1,35 @@
+# Builds every push to main and every pull request, and keeps the built Ferry.exe for 14 days
+# (under the run's "Artifacts"), so changes can be tried without building them.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build
+        run: dotnet build Ferry.sln -c Release -warnaserror
+
+      - name: Publish Ferry.exe
+        run: dotnet publish Ferry\Ferry.csproj -c Release -o publish
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Ferry-${{ github.sha }}
+          path: |
+            publish/Ferry.exe
+            publish/browser-extension/
+          retention-days: 14

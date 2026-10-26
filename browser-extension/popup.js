@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const message = (msg) => chrome.runtime.sendMessage(msg);
 
-// Line icons, the same shapes as in the app (OSDM\Icons.cs).
+// Line icons, the same shapes as in the app (Ferry\Icons.cs).
 const ICONS = {
   video: '<rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M10 9v6l5.5-3z" fill="currentColor" stroke="none"/>',
   stream: '<path d="M12 3 2.5 8 12 13l9.5-5z"/><path d="m2.5 12.5 9.5 5 9.5-5"/><path d="m2.5 16.5 9.5 5 9.5-5"/>',
@@ -66,7 +66,7 @@ async function checkStatus() {
   $("status").className = `pill ${status.running ? "ok" : "bad"}`;
   $("status").querySelector("b").textContent = status.running ? "Connected" : "Not running";
   $("offline").hidden = status.running;
-  $("version").textContent = status.running && status.version ? `OSDM ${status.version}` : "";
+  $("version").textContent = status.running && status.version ? `Ferry ${status.version}` : "";
   return status.running;
 }
 
@@ -99,7 +99,7 @@ function showMedia(media, tab) {
 
     const get = document.createElement("button");
     get.className = "get";
-    get.title = "Download with OSDM";
+    get.title = "Download with Ferry";
     get.append(svg("download"));
     get.onclick = async () => {
       const ok = await message({ type: "send", data: { url: m.url, kind: m.kind, referrer: tab.url, pageUrl: tab.url } });
@@ -125,7 +125,7 @@ async function main() {
   page.disabled = !webPage;
   page.onclick = async () => {
     const ok = await message({ type: "send", data: { url: tab.url, kind: "video", pageUrl: tab.url } });
-    flash(page, ok, ok ? "Sent to OSDM" : "Could not reach OSDM", pageLabel);
+    flash(page, ok, ok ? "Sent to Ferry" : "Could not reach Ferry", pageLabel);
     if (!ok) checkStatus();
   };
 
@@ -150,7 +150,7 @@ async function main() {
 
   $("retry").onclick = checkStatus;
   const open = $("open");
-  setLabel(open, "open", "Open OSDM");
+  setLabel(open, "open", "Open Ferry");
   open.onclick = async () => {
     if (await message({ type: "open" })) window.close();
     else checkStatus();

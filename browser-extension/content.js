@@ -1,7 +1,7 @@
-// OSDM Integration: a "Download video" panel over videos on web pages, with a menu of the video's qualities.
+// Ferry Integration: a "Download video" panel over videos on web pages, with a menu of the video's qualities.
 (() => {
-  if (window.osdmVideoButton) return; // already running in this frame
-  window.osdmVideoButton = true;
+  if (window.ferryVideoButton) return; // already running in this frame
+  window.ferryVideoButton = true;
 
   const MIN_WIDTH = 240;
   const MIN_HEIGHT = 135;
@@ -78,7 +78,7 @@
   });
 
   // The panel lives in a closed shadow root: page CSS cannot restyle it, and its CSS cannot leak into the page.
-  const host = document.createElement("osdm-video-button");
+  const host = document.createElement("ferry-video-button");
   host.style.cssText = "all: initial; position: fixed; z-index: 2147483647; top: 0; left: 0; display: none;";
   const root = host.attachShadow({ mode: "closed" });
   const sheet = new CSSStyleSheet();
@@ -87,7 +87,7 @@
 
   const wrap = element("div", { class: "wrap" });
   const bar = element("div", { class: "bar" });
-  const main = element("button", { type: "button", class: "main", title: "Download this video with OSDM", "aria-haspopup": "menu", "aria-expanded": "false" });
+  const main = element("button", { type: "button", class: "main", title: "Download this video with Ferry", "aria-haspopup": "menu", "aria-expanded": "false" });
   const badge = element("span", { class: "badge" });
   badge.append(icon("download"));
   const label = element("span", {}, LABEL);
@@ -101,12 +101,12 @@
   root.append(wrap);
 
   let current = null;  // the video the panel is showing for
-  let target = null;   // what to send to OSDM for it (see request)
+  let target = null;   // what to send to Ferry for it (see request)
   let hideTimer = 0;
   let busy = false;    // sending
   let menuOpen = false;
   const dismissed = new Set(); // links whose panel was closed with the X
-  const qualityLists = new Map(); // link -> promise of OSDM's answer
+  const qualityLists = new Map(); // link -> promise of Ferry's answer
 
   function element(tag, attrs, text) {
     const e = document.createElement(tag);
@@ -136,7 +136,7 @@
     return null;
   }
 
-  /** What to send to OSDM for this video, or null if there is nothing sensible to send. */
+  /** What to send to Ferry for this video, or null if there is nothing sensible to send. */
   function request(video) {
     const page = location.href;
     const hostname = location.hostname.replace(/^www\./, "");
@@ -219,7 +219,7 @@
     } catch {
       ok = false; // extension was reloaded or removed; the page needs a refresh
     }
-    setState(ok ? "ok" : "bad", ok ? "Sent to OSDM" : "OSDM is not running");
+    setState(ok ? "ok" : "bad", ok ? "Sent to Ferry" : "Ferry is not running");
     place();
     setTimeout(() => {
       busy = false;
@@ -228,13 +228,13 @@
     }, 2200);
   }
 
-  /** OSDM's list of qualities for a link. Asked once per link; asked again only after a failure. */
+  /** Ferry's list of qualities for a link. Asked once per link; asked again only after a failure. */
   function qualitiesFor(data) {
     let answer = qualityLists.get(data.url);
     if (!answer) {
       answer = chrome.runtime
         .sendMessage({ type: "formats", data: { url: data.url, referrer: data.referrer, pageUrl: data.pageUrl } })
-        .catch(() => ({ ok: false, error: "The OSDM extension was updated. Reload this page and try again." }));
+        .catch(() => ({ ok: false, error: "The Ferry extension was updated. Reload this page and try again." }));
       qualityLists.set(data.url, answer);
       answer.then((r) => { if (!r || !r.ok) qualityLists.delete(data.url); });
     }
@@ -282,9 +282,9 @@
 
   function renderQualities(answer, data) {
     if (answer.offline) {
-      renderStatus("error", "OSDM is not running. Start OSDM, then try again.");
+      renderStatus("error", "Ferry is not running. Start Ferry, then try again.");
     } else if (!answer.ok || !Array.isArray(answer.qualities)) {
-      const reason = String(answer.error || "OSDM could not read this video.");
+      const reason = String(answer.error || "Ferry could not read this video.");
       renderStatus("error", reason.length > 180 ? reason.slice(0, 177) + "..." : reason);
       menu.append(menuItem("download", "Download in the usual quality", "", () => send(data)));
     } else {
@@ -335,7 +335,7 @@
   wrap.addEventListener("pointerleave", () => {
     if (!busy && !menuOpen) hideTimer = setTimeout(hide, 1200);
   });
-  // Start asking OSDM for the qualities as soon as the pointer reaches the button, so the menu is ready sooner.
+  // Start asking Ferry for the qualities as soon as the pointer reaches the button, so the menu is ready sooner.
   main.addEventListener("pointerenter", () => {
     if (target?.kind === "video" && !busy) qualitiesFor(target);
   });

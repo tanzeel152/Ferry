@@ -1,4 +1,4 @@
-// OSDM Integration: hands downloads and detected videos to the OSDM app at http://localhost:<port>.
+// Ferry Integration: hands downloads and detected videos to the Ferry app at http://localhost:<port>.
 
 const DEFAULTS = {
   port: 51515,
@@ -16,7 +16,7 @@ const MAX_MEDIA_PER_TAB = 40;
 const getSettings = () => chrome.storage.local.get(DEFAULTS);
 const appUrl = (port, path) => `http://localhost:${port}${path}`;
 
-/** Resolves to OSDM's version if it is running, otherwise null. */
+/** Resolves to Ferry's version if it is running, otherwise null. */
 async function appVersion(port) {
   try {
     const r = await fetch(appUrl(port, "/ping"), { cache: "no-store" });
@@ -28,7 +28,7 @@ async function appVersion(port) {
 
 const appRunning = async (port) => (await appVersion(port)) !== null;
 
-/** Brings the OSDM window to the front. */
+/** Brings the Ferry window to the front. */
 async function openApp() {
   const { port } = await getSettings();
   try {
@@ -48,7 +48,7 @@ async function cookieHeader(url) {
   }
 }
 
-/** Sends {url, kind, referrer, fileName, pageUrl} to OSDM. Resolves to true if OSDM accepted it. */
+/** Sends {url, kind, referrer, fileName, pageUrl} to Ferry. Resolves to true if Ferry accepted it. */
 async function sendToApp(data) {
   const { port } = await getSettings();
   const body = { userAgent: navigator.userAgent, cookies: await cookieHeader(data.url), ...data };
@@ -65,7 +65,7 @@ async function sendToApp(data) {
 }
 
 /**
- * Asks OSDM which qualities a video page offers (OSDM reads them with yt-dlp, which takes a few seconds).
+ * Asks Ferry which qualities a video page offers (Ferry reads them with yt-dlp, which takes a few seconds).
  * Resolves to {ok, title, qualities: [{label, detail, format, size}]}, {ok: false, error} or {ok: false, offline: true}.
  */
 async function videoFormats(data) {
@@ -77,8 +77,8 @@ async function videoFormats(data) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (r.status === 404) return { ok: false, error: "This version of OSDM cannot list qualities. Update OSDM." };
-    if (!r.ok) return { ok: false, error: `OSDM answered with error ${r.status}.` };
+    if (r.status === 404) return { ok: false, error: "This version of Ferry cannot list qualities. Update Ferry." };
+    if (!r.ok) return { ok: false, error: `Ferry answered with error ${r.status}.` };
     return await r.json();
   } catch {
     return { ok: false, offline: true };
@@ -122,9 +122,9 @@ chrome.downloads.onCreated.addListener(async (item) => {
 // 2. Right-click menus.
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({ id: "link", title: "Download with OSDM", contexts: ["link"] });
-    chrome.contextMenus.create({ id: "media", title: "Download this media with OSDM", contexts: ["video", "audio"] });
-    chrome.contextMenus.create({ id: "page", title: "Download video on this page with OSDM", contexts: ["page"] });
+    chrome.contextMenus.create({ id: "link", title: "Download with Ferry", contexts: ["link"] });
+    chrome.contextMenus.create({ id: "media", title: "Download this media with Ferry", contexts: ["video", "audio"] });
+    chrome.contextMenus.create({ id: "page", title: "Download video on this page with Ferry", contexts: ["page"] });
   });
 });
 

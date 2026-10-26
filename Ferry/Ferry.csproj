@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ferry.Core\Ferry.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Ship the browser extension next to Ferry.exe, so users can "Load unpacked" from there. -->
+  <ItemGroup>
+    <None Include="..\browser-extension\**\*" LinkBase="browser-extension" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!-- The same icon is the exe icon (Explorer, Start menu, Control Panel) and is loaded at run time for the window and tray. -->
+  <ItemGroup>
+    <EmbeddedResource Include="ferry.ico" LogicalName="ferry.ico" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Ferry</AssemblyName>
+    <Product>Ferry</Product>
+    <Version>0.5.0</Version>
+    <Description>Free, open-source download manager for Windows</Description>
+    <Copyright>Copyright (C) 2026 Tanzeel Ahmed and Ferry contributors. GPL-3.0-or-later.</Copyright>
+    <ApplicationIcon>ferry.ico</ApplicationIcon>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+  </PropertyGroup>
+
+  <!-- dotnet publish -c Release  ->  one self-contained Ferry.exe -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+</Project>
